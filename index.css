@@ -10,7 +10,7 @@ body.no-mouse {
 .video-div-wrap {
   padding: 5px;
   box-shadow: 0 0 5px 1px;
-  border-radius: 3px;
+  border-radius: 5px;
   margin: 0 0 10px;
   transition: 0.5s ease all;
 }
@@ -18,23 +18,29 @@ body.no-mouse {
   cursor: pointer;
   box-shadow: 0 0 5px 5px #08F;
   color: #08F;
-  border-radius: 3px;
-  margin: 0 0 10px;
 }
 .video-table-wrap {
   width: 100%;
 }
 .video-table-wrap .video-thumbnail {
-  background: #000;
   height: 135px;
   width: 240px;
 }
 .video-table-wrap .video-thumbnail img {
+  border-radius: 5px;
   width: 100%;
 }
 .video-table-wrap .video-details {
   padding-left: 5px;
+  vertical-align: top;
 }
-.video-table-wrap .video-title {
+.video-table-wrap .title-wrap {
   font-size: 1.5em;
+}
+.video-table-wrap .title-wrap .btn-group {
+  color: #000;
+  float: right;
+}
+.video-table-wrap .title-wrap .btn:hover {
+  color: #08F;
 }

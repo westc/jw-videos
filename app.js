@@ -138,7 +138,21 @@ function showVids(files) {
       $: [{
         _: 'table',
         cls: 'video-table-wrap',
-        onclick: JS.partial(showVideo, file),
+        onclick: function(e) {
+          if ($(e.target).is('.btn-edit, .btn-edit *')) {
+            var jModal = $('#editModal')
+              .find('#txtFileName').val(path.basename(file.path)).end()
+              .find('#txtVidTitle').val(file.vid.title).end()
+              .find('.btn-save').unbind('click').on('click', function() {
+                $(div).find('.title-text').text(file.vid.title = jModal.find('#txtVidTitle').val());
+                file.saveIndex();
+              }).end()
+              .modal('show');
+          }
+          else {
+            showVideo(file);
+          }
+        },
         border: 0,
         cellPadding: 0,
         cellSpacing: 0,
@@ -150,7 +164,38 @@ function showVids(files) {
               _: 'td',
               cls: 'video-details',
               $: [
-                { _: 'div', cls: 'video-title', text: file.vid.title }
+                {
+                  _: 'div',
+                  cls: 'title-wrap',
+                  $: [
+                    { _: 'span', cls: 'title-text', text: file.vid.title },
+                    {
+                      _: 'div',
+                      cls: 'btn-group',
+                      $: [
+                        {
+                          _: 'button', type: 'button', cls: 'btn btn-default btn-play', title: 'Play', $: [
+                            { _: 'span', cls: 'glyphicon glyphicon-play', 'aria-hidden': true },
+                            ' Play'
+                          ]
+                        },
+                        {
+                          _: 'button', type: 'button', cls: 'btn btn-default btn-edit', title: 'Edit', $: [
+                            { _: 'span', cls: 'glyphicon glyphicon-edit', 'aria-hidden': true },
+                            ' Edit'
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  _: 'div',
+                  $: [
+                    { _: 'b', text: 'Duration: ' },
+                    { _: 'span', cls: 'duration' }
+                  ]
+                }
               ]
             }
           ]
@@ -192,6 +237,7 @@ function showThumbnail(file, div) {
       _: 'img',
       src: path.join(path.dirname(file.path), '.jw-videos', file.vid.name + '.png').replace(/\?/g, '%3F')
     }));
+    $('.duration', div).text(JS.formatDate(new Date(file.vid.duration * 1000), 'm:ss'));
   }
 
   if (file.vid.has_thumbnail) {
@@ -214,7 +260,6 @@ var generateMetaData = (function(argsStack, blocked) {
           file.vid.duration = this.duration;
         },
         onseeked: function(e) {
-          console.log('onseeked', JSON.stringify(new Date));
           var canvas = JS.dom({
             _: 'canvas',
             height: vidElem.videoHeight,
@@ -417,8 +462,44 @@ function setDirPath(dirPath, clearHistory) {
 }
 
 function showTimesShown() {
-  var timesShown = JS.get(appSettings.get('last'), 'history', []).length;
-  $('#shownMsg').text(JS.sub('You have shown {0?{0}:one} video{0?s:}.', [timesShown]));
+  var history = JS.get(appSettings.get('last'), 'history', []);
+  $('#detailsModal .modal-body').html('')
+    .append(JS([
+      {
+        _: 'div',
+        text: JS.sub('You have shown {0?{0}:one} video{0?s:}.', [history.length])
+      },
+      {
+        _: 'table',
+        cls: 'table table-striped table-hover',
+        $: [
+          {
+            _: 'thead',
+            $: [
+              { 
+                _: 'tr',
+                $: [
+                  { _: 'th', text: 'Time Shown' },
+                  { _: 'th', text: 'File Name' }
+                ]
+              }
+            ]
+          },
+          {
+            _: 'tbody',
+            $: history.map(function(item) {
+              return {
+                _: 'tr',
+                $: [
+                  { _: 'td', text: JS.formatDate(new Date(item.time), "DDD, MMM D, YYYY 'at' h:mm:ss A") },
+                  { _: 'td', text: path.basename(item.path) }
+                ]
+              };
+            }).reverse()
+          }
+        ] 
+      }
+    ]).map('dom').$);
 }
 
 function incrementVideoCount() {
@@ -484,7 +565,7 @@ $(function() {
   $('#txtSearch').on('keyup keypress', JS.debounce(function() {
     var searchTerm = this.value;
     var videoTexts = videoFiles.map(function(file) {
-      return file.vid.name;
+      return file.vid.title;
     });
     var elems = $('.video-div-wrap');
     scoreTextSearch(searchTerm, videoTexts).forEach(function(score, i) {
