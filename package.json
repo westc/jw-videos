@@ -1,0 +1,21 @@
+{
+  "name": "jw-videos",
+  "version": "1.0.0",
+  "description": "Show jw.org videos while participating in public witnessing.",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . JWVideos --version=0.36.8",
+    "build-mac32": "electron-packager . JWVideos --version=0.36.8 --platform=darwin --arch=ia32",
+    "build-mac64": "electron-packager . JWVideos --version=0.36.8 --platform=darwin --arch=x64",
+    "build-win32": "electron-packager . JWVideos --version=0.36.8 --platform=win32 --arch=ia32",
+    "build-win64": "electron-packager . JWVideos --version=0.36.8 --platform=win32 --arch=x64"
+  },
+  "author": "Christopher West (http://cwestify.com/)",
+  "license": "ISC",
+  "devDependencies": {
+    "electron-packager": "^5.2.1",
+    "electron-prebuilt": "^0.36.8",
+    "musicmetadata": "^2.0.2"
+  }
+}

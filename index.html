@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>JW Videos</title>
+
+    <!-- Bootstrap -->
+    <link href="bootstrap-3.3.7/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- YourJS (JS) and jQuery (used by Bootstrap and just in general) -->
+    <script type="text/JavaScript">
+    var JS = require('./YourJS/JS.js');
+    var jQuery = require('./jquery-2.2.1.min.js'), $ = jQuery;
+    require('./app.js');
+    </script>
+
+    <link href="index.css" rel="stylesheet" />
+  </head>
+  <body>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand">JW Videos</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li>
+              <a href="#" id="linkSetDir">
+                <span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>
+                <span>&nbsp;Set Directory</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" id="linkPlayAll">
+                <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+                <span>&nbsp;Play All</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" id="linkRndVid">
+                <span class="glyphicon glyphicon-random" aria-hidden="true"></span>
+                <span>&nbsp;Random Video</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" id="linkDetails">
+                <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                <span>&nbsp;Details</span>
+              </a>
+            </li>
+          </ul>
+          <form id="formFilter" class="navbar-form navbar-right">
+              <div class="input-group">
+                  <input type="text" id="txtSearch" placeholder="filter..." class="form-control">
+                  <span class="input-group-btn">
+                      <button class="btn btn-default btn-primary"><i class="glyphicon glyphicon-search"></i></button>
+                  </span>
+              </div>
+          </form>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div id="body" class="container">
+    </div> <!-- /container -->
+
+    <!-- detailsModal -->
+    <div class="modal fade" id="detailsModal" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="detailsModalLabel">Details</h4>
+          </div>
+          <div class="modal-body">
+            <div id="shownMsg"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default btn-primary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-reset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /detailsModal -->
+
+    <!-- videoModal -->
+    <div class="modal fade" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" data-keyboard="false">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="videoModalLabel">Video</h4>
+          </div>
+          <div class="modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default btn-primary btn-close" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /videoModal -->
+
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="bootstrap-3.3.7/js/bootstrap.min.js"></script>
+  </body>
+</html>
