@@ -5,7 +5,7 @@ const remote = require('remote');
 const APP_BASE_PATH = path.dirname(require.main.filename);
 const APP_SETTINGS_PATH = path.join(APP_BASE_PATH, 'settings.json');
 
-var isPlayingAll = false, isPlaying = false, videoFiles = [], randomOrder = [], lastIndexInRandom = 0;
+var isPlayingAll = false, isPlaying = false, isToShowSlides = false, videoFiles = [], randomOrder = [], lastIndexInRandom = 0;
 
 var appSettings = {
   _: (function() {
@@ -63,9 +63,12 @@ function scoreTextSearch(searchTerm, arrRecords) {
 
   // Loop through all search terms modifying the scores appropriately.
   var trash = JS.deburr(searchTerm).replace(
-    /(?:(\+)|(-))?(?:"(.+?)"|([^\s,.:;"\[\]\{\}\!\?\xA1\xBF]+))/g,
-    function(keyword, mustHave, hide, quoted, normal) {
-      var rgx = new RegExp(JS.quoteRegExp(quoted || normal).replace(/\\\*/g, "\\S*").replace(/^|$/g, '\\b').replace(/\s+/, '\\b\\s+\\b'), 'i');
+    /(?:(\+)|(-))?(?:"(.+?)"|\/((?:[^\\\/]|\\.)+)\/(i)?|([^\s,.:;"\[\]\{\}\!\?\xA1\xBF]+))/g,
+    function(keyword, mustHave, hide, quoted, regExpBody, regExpI, normal) {
+      var rgx = new RegExp(
+        regExpBody || JS.quoteRegExp(quoted || normal).replace(/\\\*/g, "\\S*").replace(/^|$/g, '\\b').replace(/\s+/, '\\b\\s+\\b'),
+        regExpBody ? regExpI : 'i'
+      );
       arrayOfArrays.forEach(function(arrayOfTexts, i) {
         if (scores[i] > -Infinity) {
           JS.walk(arrayOfTexts, function(text) {
@@ -130,6 +133,314 @@ function playNextVideo() {
   );
 }
 
+function showDetailKeywords(file) {
+  $('#editModal .list-keywords')
+    .html('')
+    .append(JS(file.vid.keywords).sort(compareStrNumArray, processStrNum).map(function(keyword) {
+      return JS.dom({
+        _: 'li',
+        cls: 'keyword-wrap',
+        text: keyword,
+        onclick: function() {
+          file.vid.keywords = JS.subtract(file.vid.keywords, [keyword]);
+          showDetailKeywords(file);
+          $('#editModal .text-keyword').val(keyword).select();
+        }
+      });
+    }).$);
+}
+
+function showDetailSlides(file, imagesIndex) {
+  var sw = screen.width, sh = screen.height;
+
+  var jList = $('#olSlideList');
+
+  var imageURLs = jList.find('.slide-thumbnail').map(function(i, elem) {
+    return $(elem).data('img-url');
+  }).toArray();
+
+  jList.html('').append(
+    file.vid.slides.map(function(slide, slideIndex, slides) {
+      var updateVideoImage = JS.debounce(function(time) {
+        function setBGVideoImage(img) {
+          var jDiv = $('.slide-thumbnail', li);
+
+          maximizeFontSize(
+            jDiv.css({
+                  backgroundImage: JS.sub("url('{}')", img.src),
+                  height: (sh * jDiv.width() / sw) + 'px'
+                })
+                .data('img-url', img.src)
+                .find('.text')[0]
+          );
+        }
+
+        var img, imageIndex = imagesIndex && imagesIndex[slideIndex];
+        if (imageIndex != undefined) {
+          imagesIndex[slideIndex] = undefined;
+          setBGVideoImage({ src: imageURLs[imageIndex] });
+        }
+        else {
+          getVideoImage(file.path.replace(/\?/g, '%3F'), time, setBGVideoImage);
+        }
+      }, 250);
+
+      var li = JS.dom({
+        _: 'li',
+        cls: 'slide',
+        $: [
+          {
+            _: 'div',
+            $: [
+              'Slide ',
+              {
+                _: 'select',
+                $: JS.range(slides.length).map(function(i) {
+                  return { _: 'option', text: i + 1, selected: i == slideIndex };
+                }),
+                onchange: function() {
+                  var imagesIndex = JS.range(slides.length);
+                  imagesIndex.splice(this.selectedIndex, 0, imagesIndex.splice(slideIndex, 1)[0]);
+                  slides.splice(this.selectedIndex, 0, slides.splice(slideIndex, 1)[0]);
+                  showDetailSlides(file, imagesIndex);
+                }
+              },
+              JS.sub(' of {} ', slides.length),
+              {
+                _: 'button',
+                type: 'button',
+                cls: 'btn btn-danger',
+                $: { _: 'i', cls: 'glyphicon glyphicon-trash' },
+                onclick: function() {
+                  var imagesIndex = JS(slides.length).range().splice(slideIndex, 1).$;
+                  slides.splice(slideIndex, 1);
+                  showDetailSlides(file, imagesIndex);
+                }
+              }
+            ]
+          },
+          {
+            _: 'div',
+            cls: 'slide-thumbnail',
+            $: {
+              _: 'div',
+              cls: 'text',
+              text: slide.text
+            }
+          },
+          {
+            _: 'div',
+            $: [
+              {
+                _: 'table',
+                cls: 'table-time',
+                border: 0,
+                cellPadding: 0,
+                cellSpacing: 0,
+                $: {
+                  _: 'tr',
+                  $: [
+                    {
+                      _: 'td',
+                      cls: 'td-text',
+                      $: { _: 'input', type: 'text', cls: 'time', readOnly: true, size: 5 }
+                    },
+                    {
+                      _: 'td',
+                      cls: 'td-range',
+                      $: {
+                        _: 'input',
+                        type: 'range',
+                        min: 0,
+                        max: Math.floor(file.vid.duration),
+                        value: slide.time,
+                        oninput: function() {
+                          updateVideoImage(this.value);
+                          $(this).parents('tr:eq(0)').find('.time').val(formatTime(this.value));
+                          slide.time = +this.value;
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            _: 'div',
+            $: [
+              {
+                _: 'input',
+                type: 'text',
+                cls: 'text',
+                value: slide.text,
+                placeholder: JS.sub('Text for slide {} of {}.', slideIndex + 1, slides.length),
+                oninput: function () {
+                  maximizeFontSize($(this).parents('.slide').find('.slide-thumbnail .text').text(slide.text = this.value)[0]);
+                }
+              }
+            ]
+          }
+        ]
+      });
+      $('input[type=range]', li).triggerHandler('input');
+      return li;
+    })
+  );
+}
+
+function addKeyword(jModal, file, e) {
+  var jTxt = jModal.find('.text-keyword');
+  var newKeyword = jTxt.val();
+  var matchText = JS.deburr(newKeyword.toUpperCase());
+  var keywords = file.vid.keywords;
+  var walkResult = JS.walk(keywords, function(keyword) {
+    if (JS.deburr(keyword.toUpperCase()) == matchText) {
+      jModal.find('.keyword-form-group').addClass('has-error');
+      jTxt
+        .popover({
+          title: 'Keyword Already Exists',
+          content: 'This keyword already exists as "' + keyword + '".',
+          placement: 'top',
+          trigger: 'focus'
+        })
+        .popover('show')
+        .on('keyup', function() {
+          if (this.value != newKeyword) {
+            jModal.find('.keyword-form-group').removeClass('has-error');
+            $(this).popover('destroy').unbind('keyup');
+          }
+        })
+        .select();
+      this(keyword);
+    }
+  });
+  if (JS.isNumber(walkResult)) {
+    keywords.push(newKeyword);
+    showDetailKeywords(file);
+    $('#txtNewKeyword').val('').focus();
+  }
+  e.preventDefault();
+  return false;
+}
+
+function formatTime(secs) {
+  return (~~(secs / 1440) + ':0' + ~~(secs % 1440 / 60) + ':0' + (secs % 60))
+    .replace(/:0(\d\d)/g, ':$1')
+    .replace(/^0:0/, '');
+}
+
+function maximizeFontSize(elem, opt_dontApplyFontSize) {
+  var canBeBigger, isNotTooMany,
+      iters = 0,
+      doc = elem.ownerDocument,
+      nextSibling = elem.nextSibling,
+      newFontSize = 0.5,
+      diff = 0.5,
+      fontSize = elem.style.fontSize,
+      display = elem.style.display;
+
+  elem.style.display = 'block';
+
+  do {
+    newFontSize += diff;
+    elem.style.fontSize = newFontSize + 'px';
+    if (canBeBigger = (elem.scrollWidth <= elem.offsetWidth && elem.scrollHeight <= elem.offsetHeight)) {
+      diff *= 2;
+    }
+    else {
+      newFontSize -= diff;
+      diff /= 2;
+    }
+    isNotTooMany = iters++ < 99;
+  } while((!canBeBigger || diff >= 0.5) && isNotTooMany);
+
+  elem.style.display = display;
+
+  if (!isNotTooMany || opt_dontApplyFontSize) {
+    elem.style.fontSize = fontSize;
+  }
+
+  return isNotTooMany ? newFontSize : undefined;
+}
+
+function addSlide(file, e) {
+  file.vid.slides.push({ text: '', time: 0 });
+  showDetailSlides(file, JS.range(file.vid.slides.length));
+}
+
+function updateVideoDetails(td, file) {
+  $(td).html('').append(JS([
+    {
+      _: 'div',
+      cls: 'title-wrap',
+      $: [
+        { _: 'span', cls: 'title-text', text: file.vid.title },
+        {
+          _: 'div',
+          cls: 'buttons',
+          $: [
+            {
+              _: 'div',
+              cls: 'btn-group',
+              $: [
+                {
+                  _: 'button', type: 'button', cls: 'btn btn-default btn-play', title: 'Play', $: [
+                    { _: 'span', cls: 'glyphicon glyphicon-play', 'aria-hidden': true },
+                    ' Play'
+                  ]
+                },
+                { _: 'button', type: 'button', cls: 'btn btn-default dropdown-toggle', 'data-toggle': 'dropdown', 'aria-haspop': true, 'aria-expanded': false, $: [ {_:'span',cls:'caret'}, {_:'span',cls:'sr-only',text:'Toggle Dropdown'} ] },
+                {
+                  _: 'ul',
+                  cls: 'dropdown-menu',
+                  role: 'menu',
+                  $: [
+                    // TO BE ADDED BACK IN ONCE I FIGURE OUT HOW TO GO FULLSCREEN WITHOUT USER GESTURE
+                    // { _: 'li', $: { _: 'a', href: '#', text: 'Play with Slides', cls: 'btn-playWithSlides' }, cls: file.vid.slides.length ? '' : 'disabled' },
+                    { _: 'li', $: { _: 'a', href: '#', text: 'Play Slides Only', cls: 'btn-playSlides' }, cls: file.vid.slides.length ? '' : 'disabled' }
+                  ]
+                }
+              ]
+            },
+            {
+              _: 'div',
+              cls: 'btn-group',
+              $: {
+                _: 'button', type: 'button', cls: 'btn btn-default btn-edit', title: 'Edit', $: [
+                  { _: 'span', cls: 'glyphicon glyphicon-edit', 'aria-hidden': true },
+                  ' Edit'
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      _: 'div',
+      $: [
+        { _: 'b', text: 'Duration: ' },
+        { _: 'span', cls: 'duration' }
+      ]
+    },
+    (function() {
+      if (file.vid.keywords.length) {
+        return {
+          _: 'div',
+          $: [ { _: 'b', text: 'Keywords:' } ].concat(file.vid.keywords.map(function(keyword) {
+            return { _: 'span', cls: 'keyword', text: keyword };
+          }))
+        };
+      }
+    })()
+  ]).filter().map('dom').$);
+
+  if (file.vid.duration) {
+    showDuration(file, td);
+  }
+}
+
 function showVids(files) {
   var vidDivs = files.map(function(file) {
     var div = JS.dom({
@@ -140,17 +451,43 @@ function showVids(files) {
         cls: 'video-table-wrap',
         onclick: function(e) {
           if ($(e.target).is('.btn-edit, .btn-edit *')) {
-            var jModal = $('#editModal')
+            showDetailKeywords(file);
+
+            var jModal = $('#editModal'),
+                addKeywordToFile = JS.partial(addKeyword, jModal, file),
+                addSlideToFile = JS.partial(addSlide, file);
+            jModal
               .find('#txtFileName').val(path.basename(file.path)).end()
               .find('#txtVidTitle').val(file.vid.title).end()
               .find('.btn-save').unbind('click').on('click', function() {
                 $(div).find('.title-text').text(file.vid.title = jModal.find('#txtVidTitle').val());
+                updateVideoDetails($('.video-details', div), file);
                 file.saveIndex();
               }).end()
+              .find('.keyword-form-group').removeClass('has-error')
+                .find('.text-keyword').val('').end()
+                .end()
+              .find('.form-new-keyword').unbind('submit').on('submit', addKeywordToFile)
+                .find('#btnAddKeywords').unbind('click').click(addKeywordToFile).end()
+                .end()
+              .find('#btnAddSlide').unbind('click').click(addSlideToFile).end()
+              .find('.nav-tabs > li:eq(0) > a').tab('show').end()
+              .find('.nav-tabs > li:eq(1) > a').one('shown.bs.tab', JS.partial(showDetailSlides, file, null)).end()
+              .one('shown.bs.modal', function() {
+                jModal.find('#txtVidTitle').focus();
+              })
               .modal('show');
           }
-          else {
+          else if ($(e.target).is('.btn-play, .btn-play *, :not(.buttons *)')) {
             showVideo(file);
+          }
+          else if ($(e.target).is(':not(.disabled) > .btn-playSlides')) {
+            $('#slideWrap').data('slide-file', file).data('slide-index', 0)[0].webkitRequestFullScreen();;
+            showSlides();
+          }
+          else if ($(e.target).is(':not(.disabled) > .btn-playWithSlides')) {
+            showVideo(file);
+            isToShowSlides = true;
           }
         },
         border: 0,
@@ -160,49 +497,15 @@ function showVids(files) {
           _: 'tr',
           $: [
             { _: 'td', cls: 'video-thumbnail' },
-            {
-              _: 'td',
-              cls: 'video-details',
-              $: [
-                {
-                  _: 'div',
-                  cls: 'title-wrap',
-                  $: [
-                    { _: 'span', cls: 'title-text', text: file.vid.title },
-                    {
-                      _: 'div',
-                      cls: 'btn-group',
-                      $: [
-                        {
-                          _: 'button', type: 'button', cls: 'btn btn-default btn-play', title: 'Play', $: [
-                            { _: 'span', cls: 'glyphicon glyphicon-play', 'aria-hidden': true },
-                            ' Play'
-                          ]
-                        },
-                        {
-                          _: 'button', type: 'button', cls: 'btn btn-default btn-edit', title: 'Edit', $: [
-                            { _: 'span', cls: 'glyphicon glyphicon-edit', 'aria-hidden': true },
-                            ' Edit'
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  _: 'div',
-                  $: [
-                    { _: 'b', text: 'Duration: ' },
-                    { _: 'span', cls: 'duration' }
-                  ]
-                }
-              ]
-            }
+            { _: 'td', cls: 'video-details' }
           ]
         }]
       }]
     });
+
     showThumbnail(file, div);
+    updateVideoDetails($('.video-details', div), file);
+
     return div;
   });
   $('#body').html('').append(vidDivs);
@@ -221,6 +524,7 @@ function showVideo(file) {
         playNextVideo();
       }
       else {
+        $('#slideWrap').data('slide-file', file).data('slide-index', 0);
         $('#videoModal').modal('hide');
       }
     }
@@ -231,16 +535,43 @@ function showVideo(file) {
   isPlaying = true;
 }
 
+// `file` must be set in $('#slideWrap').data('slide-file') prior to initial call
+function showSlides(opt_offset) {
+  var jSlideWrap = $('#slideWrap'),
+      slideIndex = (opt_offset || 0) + jSlideWrap.data('slide-index');
+  jSlideWrap.addClass('showing').data('slide-index', slideIndex);
+
+  var file = jSlideWrap.data('slide-file'),
+      slides = file.vid.slides, 
+      slide = slides[slideIndex];
+
+  jSlideWrap.find('.previous')[slideIndex > 0 ? 'removeClass' : 'addClass']('disabled');
+  jSlideWrap.find('.next')[slideIndex + 1 < slides.length ? 'removeClass' : 'addClass']('disabled');
+
+  getVideoImage(file.path.replace(/\?/g, '%3F'), slide.time, function(img, time, event) {
+    if (event.type != 'error') {
+      maximizeFontSize(
+        jSlideWrap.css('background-image', JS.sub("url('{}')", img.src))
+          .find('.text').text(slide.text)[0]
+      );
+    }
+  });
+}
+
+function showDuration(file, ancestorElem) {
+  $('.duration', ancestorElem).text(JS.formatDate(new Date(file.vid.duration * 1000), 'm:ss'));
+}
+
 function showThumbnail(file, div) {
   function callback() {
     $('.video-thumbnail', div).append(JS.dom({
       _: 'img',
       src: path.join(path.dirname(file.path), '.jw-videos', file.vid.name + '.png').replace(/\?/g, '%3F')
     }));
-    $('.duration', div).text(JS.formatDate(new Date(file.vid.duration * 1000), 'm:ss'));
+    showDuration(file, div);
   }
 
-  if (file.vid.has_thumbnail) {
+  if (file.vid.has_thumbnail && file.vid.height) {
     callback();
   }
   else {
@@ -248,36 +579,56 @@ function showThumbnail(file, div) {
   }
 }
 
+// https://gist.github.com/westc/f6de681820d78df64c01e10bfd03f985
+function getVideoImage(path, secs, callback) {
+  var me = this, video = document.createElement('video');
+  video.onloadedmetadata = function() {
+    if ('function' === typeof secs) {
+      secs = secs(this.duration);
+    }
+    this.currentTime = Math.min(Math.max(0, (secs < 0 ? this.duration : 0) + secs), this.duration);
+  };
+  video.onseeked = function(e) {
+    var canvas = document.createElement('canvas');
+    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var img = new Image();
+    img.src = canvas.toDataURL();
+    callback.call(me, img, this.currentTime, e);
+  };
+  video.onerror = function(e) {
+    callback.call(me, undefined, undefined, e);
+  };
+  video.src = path;
+}
+
 var generateMetaData = (function(argsStack, blocked) {
-  return function(file, callback) {
+  return function (file, callback) {
     if (!blocked) {
       blocked = true;
-      var vidElem = JS.dom({
-        _: 'video',
-        src: file.path.replace(/\?/g, '%3F'),
-        onloadedmetadata: function(e) {
-          this.currentTime = this.duration * 3 / 4;
-          file.vid.duration = this.duration;
+      getVideoImage(
+        file.path.replace(/\?/g, '%3F'),
+        function (duration) {
+          file.vid.duration = duration;
+          return duration * 3 / 4;
         },
-        onseeked: function(e) {
-          var canvas = JS.dom({
-            _: 'canvas',
-            height: vidElem.videoHeight,
-            width: vidElem.videoWidth
-          });
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(vidElem, 0, 0, canvas.width, canvas.height);
-          var buf = new Buffer(canvas.toDataURL().replace(/^data:image\/\w+;base64,/, ""), 'base64');
-          fs.writeFileSync(path.join(path.dirname(file.path), '.jw-videos', file.vid.name + '.png'), buf);
-          file.vid.has_thumbnail = true;
-          file.saveIndex();
+        function (img, currentTime, event) {
+          if (event.type != 'error') {
+            var buf = new Buffer(img.src.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+            fs.writeFileSync(path.join(path.dirname(file.path), '.jw-videos', file.vid.name + '.png'), buf);
+            JS.extend(file.vid, { has_thumbnail: true, width: img.width, height: img.height });
+            file.saveIndex();
+          }
+
           callback();
           blocked = false;
           if (argsStack.length) {
             generateMetaData.apply(0, argsStack.pop());
           }
         }
-      });
+      );
     }
     else {
       argsStack.push(arguments);
@@ -514,7 +865,20 @@ function incrementVideoCount() {
   }
 }
 
+function filterVideos() {
+  var searchTerm = this.value;
+  var videoTexts = videoFiles.map(function(file) {
+    return file.vid.title + ' ' +  file.vid.keywords.join(',');
+  });
+  var elems = $('.video-div-wrap');
+  scoreTextSearch(searchTerm, videoTexts).forEach(function(score, i) {
+    $(elems[i])[score > 0 ? 'removeClass' : 'addClass']('hidden');
+  });
+}
+
 $(function() {
+  JS.addTypeOf(jQuery, 'jQuery');
+
   $('body').on('mousemove', function() {
     $('body').removeClass('no-mouse');
     sleepMouse();
@@ -522,6 +886,7 @@ $(function() {
 
   $('#formFilter').on('submit', function(e) {
     e.preventDefault();
+    return false;
   });
 
   $('#linkRndVid').click(function() {
@@ -560,18 +925,33 @@ $(function() {
     .on('hidden.bs.modal', function() {
       isPlayingAll = isPlaying = false;
       $('#videoModal video').remove();
+      if (isToShowSlides) {
+        isToShowSlides = false;
+        document.webkitCancelFullScreen();
+        $('#slideWrap')[0].webkitRequestFullScreen();
+        showSlides();
+      }
     });
 
-  $('#txtSearch').on('keyup keypress', JS.debounce(function() {
-    var searchTerm = this.value;
-    var videoTexts = videoFiles.map(function(file) {
-      return file.vid.title;
+  $('#txtSearch').on('keyup keypress', JS.debounce(filterVideos, 200));
+
+  var jSlideWrap = $('#slideWrap');
+
+  jSlideWrap
+    .find('.previous').click(function() {
+      if (!$(this).is('.disabled')) {
+        showSlides(-1);
+      }
+    }).end()
+    .find('.next').click(function() {
+      if (!$(this).is('.disabled')) {
+        showSlides(1);
+      }
+    }).end()
+    .find('.end').click(function() {
+      document.webkitCancelFullScreen();
+      jSlideWrap.removeClass('showing');
     });
-    var elems = $('.video-div-wrap');
-    scoreTextSearch(searchTerm, videoTexts).forEach(function(score, i) {
-      $(elems[i])[score > 0 ? 'removeClass' : 'addClass']('hidden');
-    });
-  }, 200));
 
   loadFromPrevious();
 });

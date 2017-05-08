@@ -2,7 +2,7 @@
  * @preserve YourJS - Your Very Own JS Library
  * http://yourjs.com
  *
- * Copyright (c) 2015-2016 Christopher West (cwest)
+ * Copyright (c) 2015-2017 Christopher West (cwest)
  * Licensed under the MIT license.
  * http://yourjs.com/license?build_id=19
  *
@@ -64,6 +64,7 @@
   function isArrayLike(o) {
     var l, i, t;
     return !!o
+        && !o.nodeName
         && typeOf(l = o.length, 'Number')
         && (t = typeOf(o)) != 'String'
         && t != 'Function'
@@ -1100,6 +1101,9 @@
                   elem.appendChild(kids[j++]);
                 }
               }
+            }
+            else if (/\W/.test(propName)) {
+              elem.setAttribute(propName, propValue);
             }
             else {
               elem[propName] = propValue;
