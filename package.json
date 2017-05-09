@@ -6,10 +6,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-packager . JWVideos --version=0.36.8",
-    "build-mac32": "electron-packager . JWVideos --version=0.36.8 --platform=darwin --arch=ia32",
-    "build-mac64": "electron-packager . JWVideos --version=0.36.8 --platform=darwin --arch=x64",
-    "build-win32": "electron-packager . JWVideos --version=0.36.8 --platform=win32 --arch=ia32",
-    "build-win64": "electron-packager . JWVideos --version=0.36.8 --platform=win32 --arch=x64"
+    "build-mac64": "electron-packager . JWVideos --version=0.36.8 --platform=darwin --arch=x64 --out=JW-Videos_For_Mac64 --overwrite --ignore=\"JW-Videos_For.*|\\.gitignore\"",
+    "build-win64": "electron-packager . JWVideos --version=0.36.8 --platform=win32 --arch=x64 --out=JW-Videos_For_Win64 --overwrite --ignore=\"JW-Videos_For.*|\\.gitignore\""
   },
   "author": "Christopher West (http://cwestify.com/)",
   "license": "ISC",
