@@ -379,7 +379,7 @@ function updateVideoDetails(td, file) {
         {
           _: 'div',
           cls: 'buttons',
-          $: [
+          $: JS.filter([
             {
               _: 'div',
               cls: 'btn-group',
@@ -389,20 +389,36 @@ function updateVideoDetails(td, file) {
                     { _: 'span', cls: 'glyphicon glyphicon-play', 'aria-hidden': true },
                     ' Play'
                   ]
-                },
-                { _: 'button', type: 'button', cls: 'btn btn-default dropdown-toggle', 'data-toggle': 'dropdown', 'aria-haspop': true, 'aria-expanded': false, $: [ {_:'span',cls:'caret'}, {_:'span',cls:'sr-only',text:'Toggle Dropdown'} ] },
-                {
-                  _: 'ul',
-                  cls: 'dropdown-menu',
-                  role: 'menu',
-                  $: [
-                    // TO BE ADDED BACK IN ONCE I FIGURE OUT HOW TO GO FULLSCREEN WITHOUT USER GESTURE
-                    // { _: 'li', $: { _: 'a', href: '#', text: 'Play with Slides', cls: 'btn-playWithSlides' }, cls: file.vid.slides.length ? '' : 'disabled' },
-                    { _: 'li', $: { _: 'a', href: '#', text: 'Play Slides Only', cls: 'btn-playSlides' }, cls: file.vid.slides.length ? '' : 'disabled' }
-                  ]
                 }
+                /*** COMMENTED THIS OUT UNTIL I IMPLEMENT A BETTER WAY TO GO FULLSCREEN WITHOUT USER GESTURES ***/
+                // ,
+                // { _: 'button', type: 'button', cls: 'btn btn-default dropdown-toggle', 'data-toggle': 'dropdown', 'aria-haspop': true, 'aria-expanded': false, $: [ {_:'span',cls:'caret'}, {_:'span',cls:'sr-only',text:'Toggle Dropdown'} ] },
+                // {
+                //   _: 'ul',
+                //   cls: 'dropdown-menu',
+                //   role: 'menu',
+                //   $: [
+                //     // TO BE ADDED BACK IN ONCE I FIGURE OUT HOW TO GO FULLSCREEN WITHOUT USER GESTURE
+                //     // { _: 'li', $: { _: 'a', href: '#', text: 'Play with Slides', cls: 'btn-playWithSlides' }, cls: file.vid.slides.length ? '' : 'disabled' },
+                //     { _: 'li', $: { _: 'a', href: '#', text: 'Show Slides Only', cls: 'btn-playSlides' }, cls: file.vid.slides.length ? '' : 'disabled' }
+                //   ]
+                // }
               ]
             },
+            (function() {
+              if (file.vid.slides.length) {
+                return {
+                  _: 'div',
+                  cls: 'btn-group',
+                  $: {
+                    _: 'button', type: 'button', cls: 'btn btn-default btn-playSlides', title: 'Edit', $: [
+                      { _: 'span', cls: 'glyphicon glyphicon-picture', 'aria-hidden': true },
+                      ' Show Slides'
+                    ]
+                  }
+                };
+              }
+            })(),
             {
               _: 'div',
               cls: 'btn-group',
@@ -413,7 +429,7 @@ function updateVideoDetails(td, file) {
                 ]
               }
             }
-          ]
+          ])
         }
       ]
     },
@@ -752,6 +768,7 @@ function loadFromPrevious() {
       appSettings.set('last', {});
     }
   }
+  filterVideos.call($('#txtSearch').val(appSettings.get('searchTerm', ''))[0]);
 }
 
 function setDirPath(dirPath, clearHistory) {
@@ -868,12 +885,13 @@ function incrementVideoCount() {
 function filterVideos() {
   var searchTerm = this.value;
   var videoTexts = videoFiles.map(function(file) {
-    return file.vid.title + ' ' +  file.vid.keywords.join(',');
+    return (file.vid.title + ' ' +  file.vid.keywords.join(',')).replace(/\b@(\w+)\b/g, '$1') + (file.vid.slides.length ? ' _slides' : '') + (file.vid.keywords.length ? ' _keywords' : '');
   });
   var elems = $('.video-div-wrap');
-  scoreTextSearch(searchTerm, videoTexts).forEach(function(score, i) {
+  scoreTextSearch(searchTerm.replace(/@/g, '_'), videoTexts).forEach(function(score, i) {
     $(elems[i])[score > 0 ? 'removeClass' : 'addClass']('hidden');
   });
+  appSettings.set('searchTerm', searchTerm);
 }
 
 $(function() {
