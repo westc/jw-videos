@@ -4,6 +4,7 @@ var BrowserWindow = require('browser-window');
 
 app.on('ready', function() {
   var mainWindow = new BrowserWindow({
+    // https://codepen.io/cwestify/pen/eWVNwx?editors=0010
     icon: path.join(__dirname, 'assets/icons/JWVideos-128.png')
   });
   mainWindow.maximize();
