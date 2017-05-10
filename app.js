@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const remote = require('remote');
+const remote = require('electron').remote;
 
 const APP_BASE_PATH = path.dirname(require.main.filename);
 const APP_SETTINGS_PATH = path.join(APP_BASE_PATH, 'settings.json');
