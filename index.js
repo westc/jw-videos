@@ -1,5 +1,5 @@
 var path = require('path');
-const {app, globalShortcut, BrowserWindow, Menu} = require('electron');
+const {app, BrowserWindow, Menu} = require('electron');
 
 app.on('ready', function() {
   var mainWindow = new BrowserWindow({
@@ -37,7 +37,16 @@ app.on('ready', function() {
         {
           label: 'Reload',
           accelerator: 'CmdOrCtrl+R',
-          click: function () { mainWindow.reload(); }
+          click() { mainWindow.reload(); }
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Dev Tools',
+          accelerator: 'CmdOrCtrl+Alt+I',
+          click() {
+            var focusedWindow = BrowserWindow.getFocusedWindow();
+            focusedWindow && focusedWindow.webContents.toggleDevTools();
+          }
         },
         { type: 'separator' },
         {
@@ -50,8 +59,4 @@ app.on('ready', function() {
       ]
     }
   ]));
-
-  globalShortcut.register('CmdOrCtrl+Alt+I', function() {
-    mainWindow.webContents.toggleDevTools();
-  });
 });
