@@ -3,12 +3,12 @@
   "productName": "JW Videos",
   "version": "1.0.0",
   "description": "Show jw.org videos while participating in public witnessing.",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-packager .",
-    "build-mac": "electron-packager . --platform=darwin --arch=x64 --prune=true --out=builds --overwrite --ignore=\"/builds|\\.gitignore\" --icon=\"assets/icons/JWVideos-512.png.icns\"",
-    "build-win": "electron-packager . --platform=win32 --arch=x64 --prune=true --out=builds --overwrite --ignore=\"/builds|\\.gitignore\" --icon=\"assets/icons/JWVideos-256.png.ico\""
+    "build-mac": "electron-packager . --platform=darwin --arch=x64 --prune=true --out=builds --overwrite --ignore=\"/builds|\\.gitignore\" --icon=\"assets/icons/JWVideos.icns\"",
+    "build-win": "electron-packager . --platform=win32 --arch=x64 --prune=true --out=builds --overwrite --ignore=\"/builds|\\.gitignore\" --icon=\"assets/icons/JWVideos.ico\""
   },
   "repository": "https://github.com/westc/jw-videos",
   "author": "Christopher West (http://cwestify.com/)",
